@@ -8,6 +8,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property NotificationStatus $status
+ * @property-read Channel $channel
+ */
 #[Fillable(['user_id', 'channel_id', 'recipient', 'message', 'status'])]
 class Notification extends Model
 {

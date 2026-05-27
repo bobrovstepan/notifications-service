@@ -3,7 +3,9 @@
 namespace App\Jobs;
 
 use App\Channels\Factories\NotificationChannelFactory;
+use App\Enums\ChannelName;
 use App\Enums\NotificationStatus;
+use App\Models\Channel;
 use App\Models\Notification;
 use App\Repositories\Contracts\NotificationRepositoryInterface;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -26,7 +28,12 @@ class SendNotificationJob implements ShouldQueue
     ): void {
         $this->notification->loadMissing('channel');
 
-        $factory->make($this->notification->channel->name->value)
+        /** @var Channel $channel */
+        $channel = $this->notification->channel;
+        /** @var ChannelName $channelName */
+        $channelName = $channel->name;
+
+        $factory->make($channelName->value)
             ->send($this->notification);
 
         $repository->updateStatus($this->notification, NotificationStatus::Sent);

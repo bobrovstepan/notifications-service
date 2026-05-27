@@ -52,6 +52,7 @@ class NotificationRepository implements NotificationRepositoryInterface
             ->join('channels', 'notifications.channel_id', '=', 'channels.id')
             ->selectRaw('channels.name as channel, COUNT(*) as total, SUM(CASE WHEN notifications.status = ? THEN 1 ELSE 0 END) as errors', ['error'])
             ->groupBy('channels.name')
+            ->toBase()
             ->get()
             ->map(fn($row) => new ChannelStatDTO(
                 channel: $row->channel,

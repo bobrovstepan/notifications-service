@@ -9,6 +9,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable(['name'])]
+/**
+ * @property ChannelName $name
+ */
 class Channel extends Model
 {
     use HasFactory;

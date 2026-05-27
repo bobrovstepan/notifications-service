@@ -8,6 +8,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 #[Fillable(['user_id', 'period_from', 'period_to', 'status', 'file_path'])]
+/**
+ * @property ReportStatus $status
+ * @property \Illuminate\Support\Carbon $period_from
+ * @property \Illuminate\Support\Carbon $period_to
+ */
 class Report extends Model
 {
     use HasFactory;
