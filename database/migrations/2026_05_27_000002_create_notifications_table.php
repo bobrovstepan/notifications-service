@@ -12,6 +12,7 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('user_id');
             $table->foreignId('channel_id')->constrained('channels');
+            $table->string('recipient');
             $table->string('message', 500);
             $table->enum('status', ['processing', 'sent', 'error'])->default('processing');
             $table->timestamps();

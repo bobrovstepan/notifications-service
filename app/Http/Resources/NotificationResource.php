@@ -15,7 +15,7 @@ class NotificationResource extends JsonResource
             'channel'   => $this->whenLoaded('channel', fn() => $this->channel->name),
             'recipient' => $this->recipient,
             'message'   => $this->message,
-            'status'    => $this->status,
+            'status'    => $this->status->value,
             'created_at' => $this->created_at,
         ];
     }

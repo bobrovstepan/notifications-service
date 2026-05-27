@@ -14,7 +14,7 @@ class ReportResource extends JsonResource
             'user_id'     => $this->user_id,
             'period_from' => $this->period_from->toDateString(),
             'period_to'   => $this->period_to->toDateString(),
-            'status'      => $this->status,
+            'status'      => $this->status->value,
             'created_at'  => $this->created_at,
         ];
     }

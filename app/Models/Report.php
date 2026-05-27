@@ -4,11 +4,13 @@ namespace App\Models;
 
 use App\Enums\ReportStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 #[Fillable(['user_id', 'period_from', 'period_to', 'status', 'file_path'])]
 class Report extends Model
 {
+    use HasFactory;
     public const string FIELD_USER_ID     = 'user_id';
     public const string FIELD_PERIOD_FROM = 'period_from';
     public const string FIELD_PERIOD_TO   = 'period_to';

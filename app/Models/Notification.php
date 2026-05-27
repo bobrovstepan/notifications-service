@@ -4,12 +4,14 @@ namespace App\Models;
 
 use App\Enums\NotificationStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['user_id', 'channel_id', 'message', 'status'])]
+#[Fillable(['user_id', 'channel_id', 'recipient', 'message', 'status'])]
 class Notification extends Model
 {
+    use HasFactory;
     public const string FIELD_USER_ID    = 'user_id';
     public const string FIELD_CHANNEL_ID = 'channel_id';
     public const string FIELD_RECIPIENT  = 'recipient';

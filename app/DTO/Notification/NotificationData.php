@@ -2,6 +2,7 @@
 
 namespace App\DTO\Notification;
 
+use App\Enums\NotificationStatus;
 use App\Models\Notification;
 
 final class NotificationData
@@ -20,6 +21,7 @@ final class NotificationData
             Notification::FIELD_CHANNEL_ID => $this->channelId,
             Notification::FIELD_RECIPIENT  => $this->recipient,
             Notification::FIELD_MESSAGE    => $this->message,
+            Notification::FIELD_STATUS     => NotificationStatus::Processing,
         ];
     }
 }
