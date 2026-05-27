@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\DTO\Report;
 
 use App\Enums\ReportStatus;
@@ -9,7 +11,7 @@ use Carbon\Carbon;
 final class ReportData
 {
     public function __construct(
-        public readonly int    $userId,
+        public readonly int $userId,
         public readonly Carbon $periodFrom,
         public readonly Carbon $periodTo,
     ) {}

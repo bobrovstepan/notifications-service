@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use App\Enums\NotificationStatus;
@@ -16,11 +18,16 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Notification extends Model
 {
     use HasFactory;
-    public const string FIELD_USER_ID    = 'user_id';
+
+    public const string FIELD_USER_ID = 'user_id';
+
     public const string FIELD_CHANNEL_ID = 'channel_id';
-    public const string FIELD_RECIPIENT  = 'recipient';
-    public const string FIELD_MESSAGE    = 'message';
-    public const string FIELD_STATUS     = 'status';
+
+    public const string FIELD_RECIPIENT = 'recipient';
+
+    public const string FIELD_MESSAGE = 'message';
+
+    public const string FIELD_STATUS = 'status';
 
     protected function casts(): array
     {

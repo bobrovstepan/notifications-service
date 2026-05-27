@@ -1,11 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Requests\Notification;
 
+use App\Enums\ChannelName;
 use App\Rules\RecipientRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Enum;
-use App\Enums\ChannelName;
 
 class StoreNotificationRequest extends FormRequest
 {

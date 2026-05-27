@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use App\Enums\ReportStatus;
 use App\Jobs\GenerateReportJob;
 use App\Models\Report;

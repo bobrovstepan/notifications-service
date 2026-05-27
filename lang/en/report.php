@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 return [
     'created'   => 'Report generation started.',
     'retrieved' => 'Report retrieved successfully.',

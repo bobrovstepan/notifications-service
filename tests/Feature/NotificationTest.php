@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use App\Enums\ChannelName;
 use App\Enums\NotificationStatus;
 use App\Jobs\SendNotificationJob;
@@ -43,7 +45,7 @@ test('rejects invalid recipient for channel', function () {
 });
 
 test('returns notification by id', function () {
-    $channel      = Channel::factory()->create();
+    $channel = Channel::factory()->create();
     $notification = Notification::factory()->sent()->create(['channel_id' => $channel->id]);
 
     $this->getJson(route('api.notifications.show', $notification))
@@ -67,7 +69,7 @@ test('returns paginated history filtered by status', function () {
 });
 
 test('returns paginated history filtered by channel', function () {
-    $email    = Channel::factory()->create(['name' => ChannelName::Email->value]);
+    $email = Channel::factory()->create(['name' => ChannelName::Email->value]);
     $telegram = Channel::factory()->telegram()->create();
 
     Notification::factory()->count(2)->create(['user_id' => 1, 'channel_id' => $email->id]);

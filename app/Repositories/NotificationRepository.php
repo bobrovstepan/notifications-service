@@ -1,13 +1,15 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Repositories;
 
 use App\DTO\Notification\NotificationData;
 use App\DTO\Notification\NotificationFilterDTO;
+use App\DTO\Report\ChannelStatDTO;
 use App\Enums\NotificationStatus;
 use App\Filters\NotificationQueryFilter;
 use App\Models\Notification;
-use App\DTO\Report\ChannelStatDTO;
 use App\Repositories\Contracts\NotificationRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -54,10 +56,10 @@ class NotificationRepository implements NotificationRepositoryInterface
             ->groupBy('channels.name')
             ->toBase()
             ->get()
-            ->map(fn($row) => new ChannelStatDTO(
+            ->map(fn ($row) => new ChannelStatDTO(
                 channel: $row->channel,
-                total:   (int) $row->total,
-                errors:  (int) $row->errors,
+                total: (int) $row->total,
+                errors: (int) $row->errors,
             ))
             ->all();
     }

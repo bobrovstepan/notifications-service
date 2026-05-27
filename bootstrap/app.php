@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -10,9 +12,9 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
-        web: __DIR__.'/../routes/web.php',
-        api: __DIR__.'/../routes/api.php',
-        commands: __DIR__.'/../routes/console.php',
+        web: __DIR__ . '/../routes/web.php',
+        api: __DIR__ . '/../routes/api.php',
+        commands: __DIR__ . '/../routes/console.php',
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
@@ -22,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(function (ModelNotFoundException $e, Request $request) {
             if ($request->is('api/*')) {
                 $model = class_basename($e->getModel());
+
                 return response()->json([
                     'message' => __('errors.not_found', ['model' => $model]),
                 ], 404);
@@ -29,7 +32,7 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
         $exceptions->render(function (Throwable $e, Request $request) {
-            if ($request->is('api/*') && !$e instanceof HttpException && !$e instanceof ValidationException) {
+            if ($request->is('api/*') && ! $e instanceof HttpException && ! $e instanceof ValidationException) {
                 return response()->json(['message' => __('errors.server_error')], 500);
             }
         });

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 use App\DTO\Notification\CreateNotificationDTO;
@@ -15,7 +17,7 @@ class NotificationService
 {
     public function __construct(
         private readonly NotificationRepositoryInterface $repository,
-        private readonly ChannelRepositoryInterface      $channelRepository,
+        private readonly ChannelRepositoryInterface $channelRepository,
     ) {}
 
     public function create(CreateNotificationDTO $dto): Notification
@@ -23,10 +25,10 @@ class NotificationService
         $channel = $this->channelRepository->findByNameOrFail($dto->channel);
 
         $notification = $this->repository->create(new NotificationData(
-            userId:    $dto->userId,
+            userId: $dto->userId,
             channelId: $channel->id,
             recipient: $dto->recipient,
-            message:   $dto->message,
+            message: $dto->message,
         ));
 
         NotificationCreated::dispatch($notification);

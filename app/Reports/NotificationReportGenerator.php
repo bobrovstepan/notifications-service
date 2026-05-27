@@ -1,11 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Reports;
 
 use App\Models\Report;
-use Illuminate\Support\Carbon;
 use App\Reports\Contracts\ReportGeneratorInterface;
 use App\Repositories\Contracts\NotificationRepositoryInterface;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use League\Csv\Writer;

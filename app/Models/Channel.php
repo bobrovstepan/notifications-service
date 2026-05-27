@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use App\Enums\ChannelName;
@@ -15,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Channel extends Model
 {
     use HasFactory;
+
     public const string FIELD_NAME = 'name';
 
     public $timestamps = false;

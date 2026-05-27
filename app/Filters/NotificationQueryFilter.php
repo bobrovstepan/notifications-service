@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Filters;
 
 use App\DTO\Notification\NotificationFilterDTO;
@@ -21,11 +23,11 @@ class NotificationQueryFilter
 
     private function filterByStatus(Builder $query, ?NotificationStatus $status): Builder
     {
-        return $query->when($status, fn($q) => $q->where(Notification::FIELD_STATUS, $status->value));
+        return $query->when($status, fn ($q) => $q->where(Notification::FIELD_STATUS, $status->value));
     }
 
     private function filterByChannel(Builder $query, ?ChannelName $channel): Builder
     {
-        return $query->when($channel, fn($q) => $q->whereHas('channel', fn($q) => $q->where(Channel::FIELD_NAME, $channel->value)));
+        return $query->when($channel, fn ($q) => $q->whereHas('channel', fn ($q) => $q->where(Channel::FIELD_NAME, $channel->value)));
     }
 }

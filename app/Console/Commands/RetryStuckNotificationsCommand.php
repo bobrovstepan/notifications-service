@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Console\Commands;
 
 use App\Services\NotificationService;
@@ -19,10 +21,11 @@ class RetryStuckNotificationsCommand extends Command
     public function handle(): void
     {
         $minutes = (int) $this->option('minutes');
-        $count   = $this->notificationService->retryStuck($minutes);
+        $count = $this->notificationService->retryStuck($minutes);
 
         if ($count === 0) {
             $this->info(__('commands.retry_stuck.none_found'));
+
             return;
         }
 

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Providers;
 
 use App\Channels\Factories\NotificationChannelFactory;
@@ -10,11 +12,11 @@ use App\Events\NotificationCreated;
 use App\Events\ReportRequested;
 use App\Listeners\GenerateReportListener;
 use App\Listeners\SendNotificationListener;
+use App\Reports\Contracts\ReportGeneratorInterface;
+use App\Reports\NotificationReportGenerator;
 use App\Repositories\ChannelRepository;
 use App\Repositories\Contracts\ChannelRepositoryInterface;
 use App\Repositories\Contracts\NotificationRepositoryInterface;
-use App\Reports\Contracts\ReportGeneratorInterface;
-use App\Reports\NotificationReportGenerator;
 use App\Repositories\Contracts\ReportRepositoryInterface;
 use App\Repositories\NotificationRepository;
 use App\Repositories\ReportRepository;

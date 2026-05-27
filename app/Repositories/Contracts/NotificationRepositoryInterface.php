@@ -1,12 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Repositories\Contracts;
 
 use App\DTO\Notification\NotificationData;
 use App\DTO\Notification\NotificationFilterDTO;
+use App\DTO\Report\ChannelStatDTO;
 use App\Enums\NotificationStatus;
 use App\Models\Notification;
-use App\DTO\Report\ChannelStatDTO;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;

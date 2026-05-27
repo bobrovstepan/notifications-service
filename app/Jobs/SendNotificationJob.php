@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Jobs;
 
 use App\Channels\Factories\NotificationChannelFactory;
@@ -23,7 +25,7 @@ class SendNotificationJob implements ShouldQueue
     public function __construct(public readonly Notification $notification) {}
 
     public function handle(
-        NotificationChannelFactory      $factory,
+        NotificationChannelFactory $factory,
         NotificationRepositoryInterface $repository,
     ): void {
         $this->notification->loadMissing('channel');

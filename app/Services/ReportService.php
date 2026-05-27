@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 use App\DTO\Report\CreateReportDTO;
@@ -20,9 +22,9 @@ class ReportService
     public function create(CreateReportDTO $dto): Report
     {
         $report = $this->reportRepository->create(new ReportData(
-            userId:     $dto->userId,
+            userId: $dto->userId,
             periodFrom: $dto->periodFrom,
-            periodTo:   $dto->periodTo,
+            periodTo: $dto->periodTo,
         ));
 
         ReportRequested::dispatch($report);

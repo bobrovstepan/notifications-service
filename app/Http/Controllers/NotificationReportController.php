@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
 use App\DTO\Report\CreateReportDTO;
@@ -19,7 +21,7 @@ class NotificationReportController extends Controller
     public function store(StoreReportRequest $request): JsonResponse
     {
         $report = $this->reportService->create(
-            CreateReportDTO::fromRequest($request)
+            CreateReportDTO::fromRequest($request),
         );
 
         return (new ReportResource($report))
