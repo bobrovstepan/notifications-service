@@ -1,58 +1,91 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Notifications Service
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A microservice for sending notifications (email, Telegram, etc.) and generating reports on notification activity.
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Running Locally
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
-
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
-
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+**Requirements:** Docker, Docker Compose
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+cp .env.example .env
+docker compose up -d
+docker compose exec app composer install
+docker compose exec app php artisan migrate --seed
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+The API will be available at `http://localhost:8080`.
 
-## Contributing
+To run tests:
+```bash
+docker compose exec app php artisan test
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+To run static analysis:
+```bash
+docker compose exec app ./vendor/bin/phpstan analyse --memory-limit=512M
+```
 
-## Code of Conduct
+To check code style:
+```bash
+docker compose exec app ./vendor/bin/pint --test
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+To fix code style:
+```bash
+docker compose exec app ./vendor/bin/pint
+```
 
-## Security Vulnerabilities
+---
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Architecture
 
-## License
+### Repository Pattern + Service Layer
+Business logic lives in services, data access is behind repository interfaces. Controllers stay thin — they validate input and return responses. This makes it easy to swap implementations (e.g., switch from Eloquent to a raw query builder) without touching business logic.
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+### Strategy Pattern for Channels
+Each notification channel (`email`, `telegram`) is a separate class implementing `ChannelHandlerInterface`. A factory resolves the correct handler by channel name. Adding a new channel means adding one class — no existing code changes.
+
+### Queue-based Processing
+Notifications and reports are processed asynchronously via jobs. Jobs have retry logic (`tries=3`, backoff `30s/60s`) and a `failed()` hook that marks the record as failed in the database. This ensures delivery attempts are tracked and failures are visible. A scheduled cron command retries failed jobs periodically via `queue:retry all`.
+
+### API Versioning
+All routes are prefixed with `/api/v1/`. This allows breaking changes in future versions without affecting existing clients.
+
+### DTOs and Resources
+Input data is wrapped in DTOs (`NotificationData`, `ReportData`) before reaching the service layer — this decouples HTTP request structure from the domain. API responses are shaped by Resource classes (`NotificationResource`, `ReportResource`), keeping response format concerns out of models and controllers.
+
+### Avoiding Primitive Types
+Raw primitives (`string`, `int`) are replaced with typed objects where possible — enums for statuses (`NotificationStatus`, `ReportStatus`, `ChannelName`) and DTOs for grouped data. This prevents passing values in the wrong order, makes invalid states unrepresentable, and shifts errors to compile time rather than runtime.
+
+### Dedicated Storage Disk
+Reports are stored on a dedicated `reports` disk (configured in `config/filesystems.php`) separate from the default `local` disk. This isolates report files from other application storage, makes it trivial to swap the underlying driver (e.g., to S3) without touching application code, and keeps the storage root configurable per environment.
+
+### Service Container Bindings
+Repository interfaces and the report generator interface are bound to their implementations in `AppServiceProvider`. No class depends on a concrete implementation — only on the interface. This makes it easy to swap implementations (e.g., replace `NotificationRepository` with a cached version) in one place without touching any other code.
+
+### Event-driven Dispatch
+Controllers fire events (`NotificationCreated`, `ReportRequested`) rather than dispatching jobs directly. Listeners handle job dispatch. This decouples the HTTP layer from queue logic — adding a new reaction to an event (e.g., sending a webhook) means adding a listener, not modifying the controller.
+
+### Query Filters
+Filtering logic for listing notifications is encapsulated in `NotificationQueryFilter`, with filter parameters transported via `NotificationFilterDTO`. This keeps the repository method clean and makes it easy to add or remove filters without touching the query itself.
+
+### Partial DDD Influence
+The codebase is organized around domain concepts: `Notification`, `Report`, `Channel`. Each has its own model, repository, DTO, and resource. Not strict DDD, but the boundaries are clear enough to extract into separate services if needed.
+
+---
+
+## What Would Be Improved for Production
+
+**Replace database queue with a message broker.** The current setup uses Laravel's database queue driver — fine for development, but not for production scale. RabbitMQ or Kafka would give proper durability, backpressure, and fan-out to multiple consumers.
+
+**Expand test coverage.** Currently only the most critical paths are covered (happy path, job failure hooks). Production requires full coverage: all validation rules, edge cases in report generation, retry behavior, concurrent job execution.
+
+**Authentication and authorization.** The API currently has no auth. In production, each request should be authenticated (API key or JWT) and scoped to a tenant/user.
+
+**Structured logging and observability.** Add correlation IDs to trace a notification through queue → job → channel handler. Export metrics (delivery rate, error rate per channel) to Prometheus or Datadog.
+
+**Idempotency.** Retried jobs can send duplicate notifications. A deduplication key on the notifications table and a check before sending would prevent this.
+
+**Report storage.** Currently reports are stored on the local filesystem. In production this should be S3 (or compatible) so reports survive container restarts and are accessible across multiple app instances.
