@@ -19,10 +19,10 @@ final class ReportData
     public function toArray(): array
     {
         return [
-            Report::FIELD_USER_ID     => $this->userId,
+            Report::FIELD_USER_ID => $this->userId,
             Report::FIELD_PERIOD_FROM => $this->periodFrom,
-            Report::FIELD_PERIOD_TO   => $this->periodTo,
-            Report::FIELD_STATUS      => ReportStatus::Pending,
+            Report::FIELD_PERIOD_TO => $this->periodTo,
+            Report::FIELD_STATUS => ReportStatus::Pending,
         ];
     }
 }

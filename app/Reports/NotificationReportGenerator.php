@@ -44,6 +44,6 @@ class NotificationReportGenerator implements ReportGeneratorInterface
 
     private function generateFilename(): string
     {
-        return Str::uuid() . '.csv';
+        return Str::uuid().'.csv';
     }
 }

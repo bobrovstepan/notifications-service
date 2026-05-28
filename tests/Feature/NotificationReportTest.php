@@ -11,9 +11,9 @@ test('creates report and returns 201', function () {
     Queue::fake();
 
     $this->postJson(route('api.notifications.reports.store'), [
-        'user_id'     => 1,
+        'user_id' => 1,
         'period_from' => '2026-01-01',
-        'period_to'   => '2026-05-27',
+        'period_to' => '2026-05-27',
     ])
         ->assertStatus(201)
         ->assertJsonPath('data.status', ReportStatus::Pending->value);

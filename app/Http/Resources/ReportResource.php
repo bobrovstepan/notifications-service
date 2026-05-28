@@ -23,12 +23,12 @@ class ReportResource extends JsonResource
         $status = $this->status;
 
         return [
-            'id'          => $this->id,
-            'user_id'     => $this->user_id,
+            'id' => $this->id,
+            'user_id' => $this->user_id,
             'period_from' => $periodFrom->toDateString(),
-            'period_to'   => $periodTo->toDateString(),
-            'status'      => $status->value,
-            'created_at'  => $this->created_at,
+            'period_to' => $periodTo->toDateString(),
+            'status' => $status->value,
+            'created_at' => $this->created_at,
         ];
     }
 }

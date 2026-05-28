@@ -14,10 +14,10 @@ test('creates notification and dispatches job', function () {
     Channel::factory()->create();
 
     $response = $this->postJson(route('api.notifications.store'), [
-        'user_id'   => 1,
-        'channel'   => ChannelName::Email->value,
+        'user_id' => 1,
+        'channel' => ChannelName::Email->value,
         'recipient' => 'user@example.com',
-        'message'   => 'Hello',
+        'message' => 'Hello',
     ]);
 
     $response->assertStatus(201)
@@ -28,19 +28,19 @@ test('creates notification and dispatches job', function () {
 
 test('rejects message over 500 characters', function () {
     $this->postJson(route('api.notifications.store'), [
-        'user_id'   => 1,
-        'channel'   => ChannelName::Email->value,
+        'user_id' => 1,
+        'channel' => ChannelName::Email->value,
         'recipient' => 'user@example.com',
-        'message'   => str_repeat('a', 501),
+        'message' => str_repeat('a', 501),
     ])->assertStatus(422)->assertJsonValidationErrors('message');
 });
 
 test('rejects invalid recipient for channel', function () {
     $this->postJson(route('api.notifications.store'), [
-        'user_id'   => 1,
-        'channel'   => ChannelName::Telegram->value,
+        'user_id' => 1,
+        'channel' => ChannelName::Telegram->value,
         'recipient' => 'not-a-number',
-        'message'   => 'Hello',
+        'message' => 'Hello',
     ])->assertStatus(422)->assertJsonValidationErrors('recipient');
 });
 

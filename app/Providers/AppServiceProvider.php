@@ -34,7 +34,7 @@ class AppServiceProvider extends ServiceProvider
 
         $this->app->singleton(NotificationChannelFactory::class, function ($app) {
             return new NotificationChannelFactory([
-                ChannelName::Email->value    => $app->make(EmailChannelHandler::class),
+                ChannelName::Email->value => $app->make(EmailChannelHandler::class),
                 ChannelName::Telegram->value => $app->make(TelegramChannelHandler::class),
             ]);
         });

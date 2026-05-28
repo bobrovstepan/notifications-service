@@ -33,9 +33,9 @@ class Report extends Model
     protected function casts(): array
     {
         return [
-            'status'      => ReportStatus::class,
+            'status' => ReportStatus::class,
             'period_from' => 'date',
-            'period_to'   => 'date',
+            'period_to' => 'date',
         ];
     }
 }

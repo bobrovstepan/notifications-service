@@ -12,7 +12,7 @@ enum ChannelName: string
     public function recipientRule(): string
     {
         return match ($this) {
-            self::Email    => 'email',
+            self::Email => 'email',
             self::Telegram => 'regex:/^\d+$/',
         };
     }

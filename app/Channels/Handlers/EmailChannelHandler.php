@@ -14,7 +14,7 @@ class EmailChannelHandler implements ChannelHandlerInterface
     {
         Log::info('Sending email notification', [
             'notification_id' => $notification->id,
-            'recipient'       => $notification->recipient,
+            'recipient' => $notification->recipient,
         ]);
     }
 }

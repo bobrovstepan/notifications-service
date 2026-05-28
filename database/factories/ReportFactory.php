@@ -15,18 +15,18 @@ class ReportFactory extends Factory
     public function definition(): array
     {
         return [
-            'user_id'     => 1,
+            'user_id' => 1,
             'period_from' => now()->subMonth()->toDateString(),
-            'period_to'   => now()->toDateString(),
-            'status'      => ReportStatus::Pending,
-            'file_path'   => null,
+            'period_to' => now()->toDateString(),
+            'status' => ReportStatus::Pending,
+            'file_path' => null,
         ];
     }
 
     public function ready(): static
     {
         return $this->state([
-            'status'    => ReportStatus::Ready,
+            'status' => ReportStatus::Ready,
             'file_path' => 'test-report.csv',
         ]);
     }

@@ -19,11 +19,11 @@ final class NotificationData
     public function toArray(): array
     {
         return [
-            Notification::FIELD_USER_ID    => $this->userId,
+            Notification::FIELD_USER_ID => $this->userId,
             Notification::FIELD_CHANNEL_ID => $this->channelId,
-            Notification::FIELD_RECIPIENT  => $this->recipient,
-            Notification::FIELD_MESSAGE    => $this->message,
-            Notification::FIELD_STATUS     => NotificationStatus::Processing,
+            Notification::FIELD_RECIPIENT => $this->recipient,
+            Notification::FIELD_MESSAGE => $this->message,
+            Notification::FIELD_STATUS => NotificationStatus::Processing,
         ];
     }
 }

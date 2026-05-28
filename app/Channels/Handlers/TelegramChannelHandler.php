@@ -14,7 +14,7 @@ class TelegramChannelHandler implements ChannelHandlerInterface
     {
         Log::info('Sending telegram notification', [
             'notification_id' => $notification->id,
-            'chat_id'         => $notification->recipient,
+            'chat_id' => $notification->recipient,
         ]);
     }
 }

@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'created'   => 'Report generation started.',
+    'created' => 'Report generation started.',
     'retrieved' => 'Report retrieved successfully.',
     'not_ready' => 'Report is not ready yet.',
 ];
