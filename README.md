@@ -41,11 +41,15 @@ docker compose exec app ./vendor/bin/pint
 
 ## Architecture
 
-### Repository Pattern + Service Layer
-Business logic lives in services, data access is behind repository interfaces. Controllers stay thin — they validate input and return responses. This makes it easy to swap implementations (e.g., switch from Eloquent to a raw query builder) without touching business logic.
+### Partial DDD Influence
+The codebase is organized around domain concepts: `Notification`, `Report`, `Channel`. Each has its own model, repository, DTO, and resource. Not strict DDD, but the boundaries are clear enough to extract into separate services if needed.
 
 ### Strategy Pattern for Channels
 Each notification channel (`email`, `telegram`) is a separate class implementing `ChannelHandlerInterface`. A factory resolves the correct handler by channel name. Adding a new channel means adding one class — no existing code changes.
+
+### Repository Pattern + Service Layer
+Business logic lives in services, data access is behind repository interfaces. Controllers stay thin — they validate input and return responses. This makes it easy to swap implementations (e.g., switch from Eloquent to a raw query builder) without touching business logic.
+
 
 ### Queue-based Processing
 Notifications and reports are processed asynchronously via jobs. Jobs have retry logic (`tries=3`, backoff `30s/60s`) and a `failed()` hook that marks the record as failed in the database. This ensures delivery attempts are tracked and failures are visible. A scheduled cron command retries failed jobs periodically via `queue:retry all`.
@@ -71,14 +75,11 @@ Controllers fire events (`NotificationCreated`, `ReportRequested`) rather than d
 ### Query Filters
 Filtering logic for listing notifications is encapsulated in `NotificationQueryFilter`, with filter parameters transported via `NotificationFilterDTO`. This keeps the repository method clean and makes it easy to add or remove filters without touching the query itself.
 
-### Partial DDD Influence
-The codebase is organized around domain concepts: `Notification`, `Report`, `Channel`. Each has its own model, repository, DTO, and resource. Not strict DDD, but the boundaries are clear enough to extract into separate services if needed.
-
 ---
 
 ## What Would Be Improved for Production
 
-**Replace database queue with a message broker.** The current setup uses Laravel's database queue driver — fine for development, but not for production scale. RabbitMQ or Kafka would give proper durability, backpressure, and fan-out to multiple consumers.
+**Upgrade the queue driver.** The current setup uses Laravel's database queue driver — fine for development, but not for production. The natural upgrade path: first switch to Redis (faster, in-memory, no DB polling), then to a full message broker like RabbitMQ for serious scale. A broker gives native fan-out (one event consumed by multiple services), durable message persistence, backpressure, and dead letter queues — all things a notifications service eventually needs.
 
 **Expand test coverage.** Currently only the most critical paths are covered (happy path, job failure hooks). Production requires full coverage: all validation rules, edge cases in report generation, retry behavior, concurrent job execution.
 
