@@ -9,6 +9,7 @@ use App\Repositories\Contracts\NotificationRepositoryInterface;
 
 test('marks notification as error on failure', function () {
     $notification = Mockery::mock(Notification::class);
+    $notification->shouldReceive('getAttribute')->with('id')->andReturn(1);
 
     $repository = Mockery::mock(NotificationRepositoryInterface::class);
     $repository->shouldReceive('updateStatus')

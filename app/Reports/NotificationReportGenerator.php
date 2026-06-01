@@ -6,7 +6,7 @@ namespace App\Reports;
 
 use App\Models\Report;
 use App\Reports\Contracts\ReportGeneratorInterface;
-use App\Repositories\Contracts\NotificationRepositoryInterface;
+use App\Repositories\Contracts\ReportRepositoryInterface;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -14,7 +14,7 @@ use League\Csv\Writer;
 
 class NotificationReportGenerator implements ReportGeneratorInterface
 {
-    public function __construct(private readonly NotificationRepositoryInterface $notificationRepository) {}
+    public function __construct(private readonly ReportRepositoryInterface $reportRepository) {}
 
     public function generate(Report $report): string
     {
@@ -35,7 +35,7 @@ class NotificationReportGenerator implements ReportGeneratorInterface
 
     private function collectData(Report $report): array
     {
-        return $this->notificationRepository->getStatsByPeriod(
+        return $this->reportRepository->getStatsByPeriod(
             $report->user_id,
             Carbon::parse($report->period_from),
             Carbon::parse($report->period_to),

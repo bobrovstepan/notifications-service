@@ -9,8 +9,40 @@ services:
     volumes:
       - .:/var/www
       - ./docker/php/php.ini:/usr/local/etc/php/conf.d/custom.ini
-    environment:
-      - APP_ENV=${APP_ENV:-local}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - notifications
+
+  worker:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    container_name: notifications_worker
+    restart: unless-stopped
+    working_dir: /var/www
+    command: php artisan queue:work --sleep=3 --timeout=60
+    volumes:
+      - .:/var/www
+      - ./docker/php/php.ini:/usr/local/etc/php/conf.d/custom.ini
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - notifications
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    container_name: notifications_scheduler
+    restart: unless-stopped
+    working_dir: /var/www
+    command: php artisan schedule:work
+    volumes:
+      - .:/var/www
+      - ./docker/php/php.ini:/usr/local/etc/php/conf.d/custom.ini
     depends_on:
       postgres:
         condition: service_healthy

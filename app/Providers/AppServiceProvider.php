@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Channels\Factories\NotificationChannelFactory;
-use App\Channels\Handlers\EmailChannelHandler;
-use App\Channels\Handlers\TelegramChannelHandler;
 use App\Enums\ChannelName;
 use App\Events\NotificationCreated;
+use App\Events\NotificationRetried;
 use App\Events\ReportRequested;
 use App\Listeners\GenerateReportListener;
+use App\Listeners\RetryNotificationListener;
 use App\Listeners\SendNotificationListener;
 use App\Reports\Contracts\ReportGeneratorInterface;
 use App\Reports\NotificationReportGenerator;
@@ -33,16 +33,19 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(ReportGeneratorInterface::class, NotificationReportGenerator::class);
 
         $this->app->singleton(NotificationChannelFactory::class, function ($app) {
-            return new NotificationChannelFactory([
-                ChannelName::Email->value => $app->make(EmailChannelHandler::class),
-                ChannelName::Telegram->value => $app->make(TelegramChannelHandler::class),
-            ]);
+            $handlers = [];
+            foreach (ChannelName::cases() as $channel) {
+                $handlers[$channel->value] = $app->make($channel->handlerClass());
+            }
+
+            return new NotificationChannelFactory($handlers);
         });
     }
 
     public function boot(): void
     {
         Event::listen(NotificationCreated::class, SendNotificationListener::class);
+        Event::listen(NotificationRetried::class, RetryNotificationListener::class);
         Event::listen(ReportRequested::class, GenerateReportListener::class);
     }
 }

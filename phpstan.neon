@@ -5,13 +5,3 @@ parameters:
     paths:
         - app
     level: 5
-    ignoreErrors:
-        -
-            identifier: notIdentical.alwaysTrue
-            path: app/Http/Controllers/NotificationReportController.php
-        -
-            identifier: booleanOr.alwaysTrue
-            path: app/Http/Controllers/NotificationReportController.php
-        -
-            identifier: deadCode.unreachable
-            path: app/Http/Controllers/NotificationReportController.php

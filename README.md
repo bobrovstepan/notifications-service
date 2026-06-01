@@ -17,6 +17,8 @@ docker compose exec app php artisan migrate --seed
 
 The API will be available at `http://localhost:8080`.
 
+The queue worker and scheduler start automatically as separate Docker services (`worker`, `scheduler`). No manual setup required.
+
 To run tests:
 ```bash
 docker compose exec app php artisan test
@@ -45,7 +47,7 @@ docker compose exec app ./vendor/bin/pint
 The codebase is organized around domain concepts: `Notification`, `Report`, `Channel`. Each has its own model, repository, DTO, and resource. Not strict DDD, but the boundaries are clear enough to extract into separate services if needed.
 
 ### Strategy Pattern for Channels
-Each notification channel (`email`, `telegram`) is a separate class implementing `ChannelHandlerInterface`. A factory resolves the correct handler by channel name. Adding a new channel means adding one class — no existing code changes.
+Each notification channel (`email`, `telegram`) is a separate class implementing `ChannelHandlerInterface`. A factory resolves the correct handler by channel name. Adding a new channel requires two steps: adding a case to `ChannelName` enum (with its validation rule and handler class reference), and creating the handler class itself. `AppServiceProvider` auto-discovers handlers via `ChannelName::cases()` and never needs to change.
 
 ### Repository Pattern + Service Layer
 Business logic lives in services, data access is behind repository interfaces. Controllers stay thin — they validate input and return responses. This makes it easy to swap implementations (e.g., switch from Eloquent to a raw query builder) without touching business logic.

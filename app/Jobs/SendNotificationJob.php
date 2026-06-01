@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Jobs;
 
 use App\Channels\Factories\NotificationChannelFactory;
+use App\DTO\Notification\SendNotificationDTO;
 use App\Enums\ChannelName;
 use App\Enums\NotificationStatus;
 use App\Models\Channel;
@@ -12,6 +13,7 @@ use App\Models\Notification;
 use App\Repositories\Contracts\NotificationRepositoryInterface;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class SendNotificationJob implements ShouldQueue
@@ -35,8 +37,11 @@ class SendNotificationJob implements ShouldQueue
         /** @var ChannelName $channelName */
         $channelName = $channel->name;
 
-        $factory->make($channelName->value)
-            ->send($this->notification);
+        $factory->make($channelName)->send(new SendNotificationDTO(
+            notificationId: $this->notification->id,
+            recipient: $this->notification->recipient,
+            message: $this->notification->message,
+        ));
 
         $repository->updateStatus($this->notification, NotificationStatus::Sent);
     }
@@ -45,6 +50,11 @@ class SendNotificationJob implements ShouldQueue
         NotificationRepositoryInterface $repository,
         Throwable $e,
     ): void {
+        Log::error('Failed to send notification', [
+            'notification_id' => $this->notification->id,
+            'error' => $e->getMessage(),
+        ]);
+
         $repository->updateStatus($this->notification, NotificationStatus::Error);
     }
 }

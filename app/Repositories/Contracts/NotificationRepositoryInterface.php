@@ -6,12 +6,10 @@ namespace App\Repositories\Contracts;
 
 use App\DTO\Notification\NotificationData;
 use App\DTO\Notification\NotificationFilterDTO;
-use App\DTO\Report\ChannelStatDTO;
 use App\Enums\NotificationStatus;
 use App\Models\Notification;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Carbon;
 
 interface NotificationRepositoryInterface
 {
@@ -23,7 +21,4 @@ interface NotificationRepositoryInterface
     public function findStuck(int $minutes): Collection;
 
     public function getUserHistory(NotificationFilterDTO $filter): LengthAwarePaginator;
-
-    /** @return list<ChannelStatDTO> */
-    public function getStatsByPeriod(int $userId, Carbon $from, Carbon $to): array;
 }

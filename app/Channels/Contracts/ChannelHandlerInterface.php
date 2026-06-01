@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Channels\Contracts;
 
-use App\Models\Notification;
+use App\DTO\Notification\SendNotificationDTO;
 
 interface ChannelHandlerInterface
 {
-    public function send(Notification $notification): void;
+    public function send(SendNotificationDTO $dto): void;
 }

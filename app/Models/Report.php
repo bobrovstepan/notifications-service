@@ -10,12 +10,15 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 
-#[Fillable(['user_id', 'period_from', 'period_to', 'status', 'file_path'])]
 /**
+ * @property int $id
+ * @property int $user_id
  * @property ReportStatus $status
+ * @property string|null $file_path
  * @property Carbon $period_from
  * @property Carbon $period_to
  */
+#[Fillable(['user_id', 'period_from', 'period_to', 'status', 'file_path'])]
 class Report extends Model
 {
     use HasFactory;

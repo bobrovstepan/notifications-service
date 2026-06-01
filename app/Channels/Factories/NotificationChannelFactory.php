@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Channels\Factories;
 
 use App\Channels\Contracts\ChannelHandlerInterface;
+use App\Enums\ChannelName;
 use App\Exceptions\ChannelHandlerNotFoundException;
 
 class NotificationChannelFactory
@@ -16,9 +17,9 @@ class NotificationChannelFactory
         private readonly array $handlers,
     ) {}
 
-    public function make(string $channelName): ChannelHandlerInterface
+    public function make(ChannelName $channelName): ChannelHandlerInterface
     {
-        return $this->handlers[$channelName]
-            ?? throw ChannelHandlerNotFoundException::forChannel($channelName);
+        return $this->handlers[$channelName->value]
+            ?? throw ChannelHandlerNotFoundException::forChannel($channelName->value);
     }
 }

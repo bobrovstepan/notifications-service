@@ -8,6 +8,7 @@ use App\DTO\Notification\CreateNotificationDTO;
 use App\DTO\Notification\NotificationData;
 use App\DTO\Notification\NotificationFilterDTO;
 use App\Events\NotificationCreated;
+use App\Events\NotificationRetried;
 use App\Models\Notification;
 use App\Repositories\Contracts\ChannelRepositoryInterface;
 use App\Repositories\Contracts\NotificationRepositoryInterface;
@@ -46,7 +47,7 @@ class NotificationService
         $stuck = $this->repository->findStuck($minutes);
 
         foreach ($stuck as $notification) {
-            NotificationCreated::dispatch($notification);
+            NotificationRetried::dispatch($notification);
         }
 
         return $stuck->count();
