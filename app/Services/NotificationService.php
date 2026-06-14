@@ -4,52 +4,99 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\DTO\Notification\CreateNotificationDTO;
-use App\DTO\Notification\NotificationData;
-use App\DTO\Notification\NotificationFilterDTO;
-use App\Events\NotificationCreated;
-use App\Events\NotificationRetried;
+use App\Contracts\Repositories\NotificationRepositoryInterface;
+use App\DTO\SendNotificationDTO;
+use App\Enums\NotificationStatus;
+use App\Jobs\ProcessNotificationJob;
 use App\Models\Notification;
-use App\Repositories\Contracts\ChannelRepositoryInterface;
-use App\Repositories\Contracts\NotificationRepositoryInterface;
-use Illuminate\Pagination\LengthAwarePaginator;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class NotificationService
 {
+    private const IDEMPOTENCY_TTL_HOURS = 24;
+
     public function __construct(
-        private readonly NotificationRepositoryInterface $repository,
-        private readonly ChannelRepositoryInterface $channelRepository,
+        private readonly NotificationRepositoryInterface $notificationRepository,
     ) {}
 
-    public function create(CreateNotificationDTO $dto): Notification
+    public function dispatch(SendNotificationDTO $dto): Notification
     {
-        $channel = $this->channelRepository->findByNameOrFail($dto->channel);
+        return DB::transaction(function () use ($dto) {
+            $channel = $this->notificationRepository->findActiveChannel($dto->channel);
+            $notification = $this->notificationRepository->createNotification($dto, $channel->id);
+            $recipients = $this->buildRecipients($notification->id, $dto->subscriberIds);
 
-        $notification = $this->repository->create(new NotificationData(
-            userId: $dto->userId,
-            channelId: $channel->id,
-            recipient: $dto->recipient,
-            message: $dto->message,
-        ));
+            $this->notificationRepository->insertRecipients($recipients);
+            $this->dispatchJobs($recipients, $dto);
 
-        NotificationCreated::dispatch($notification);
+            Log::info('Notification dispatched', [
+                'notification_id' => $notification->id,
+                'channel' => $dto->channel->value,
+                'type' => $dto->type->value,
+                'recipients_count' => count($recipients),
+            ]);
 
-        return $notification;
+            return $notification;
+        });
     }
 
-    public function getUserHistory(NotificationFilterDTO $filter): LengthAwarePaginator
+    public function findWithDetails(string $id): Notification
     {
-        return $this->repository->getUserHistory($filter);
+        return $this->notificationRepository->findWithRelations($id);
     }
 
-    public function retryStuck(int $minutes): int
+    public function findCachedResponse(string $idempotencyKey): ?array
     {
-        $stuck = $this->repository->findStuck($minutes);
+        $record = $this->notificationRepository->findIdempotencyKey($idempotencyKey);
 
-        foreach ($stuck as $notification) {
-            NotificationRetried::dispatch($notification);
+        if (! $record) {
+            return null;
         }
 
-        return $stuck->count();
+        if ($record->isExpired()) {
+            $this->notificationRepository->deleteIdempotencyKey($idempotencyKey);
+
+            return null;
+        }
+
+        return $record->response_snapshot;
+    }
+
+    public function cacheResponse(string $idempotencyKey, Notification $notification, array $response): void
+    {
+        $this->notificationRepository->upsertIdempotencyKey(
+            key: $idempotencyKey,
+            notificationId: $notification->id,
+            response: $response,
+            expiresAt: Carbon::now()->addHours(self::IDEMPOTENCY_TTL_HOURS),
+        );
+    }
+
+    private function buildRecipients(string $notificationId, array $subscriberIds): array
+    {
+        return array_map(
+            fn (string $subscriberId) => [
+                'id' => Str::uuid()->toString(),
+                'notification_id' => $notificationId,
+                'subscriber_id' => $subscriberId,
+                'status' => NotificationStatus::Queued->value,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            array_unique($subscriberIds),
+        );
+    }
+
+    private function dispatchJobs(array $recipients, SendNotificationDTO $dto): void
+    {
+        foreach ($recipients as $recipient) {
+            ProcessNotificationJob::dispatch(
+                notificationId: $recipient['notification_id'],
+                recipientId: $recipient['id'],
+            )->onQueue($dto->type->queueName());
+        }
     }
 }

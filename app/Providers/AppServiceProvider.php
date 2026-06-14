@@ -4,48 +4,38 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
-use App\Channels\Factories\NotificationChannelFactory;
-use App\Enums\ChannelName;
-use App\Events\NotificationCreated;
-use App\Events\NotificationRetried;
-use App\Events\ReportRequested;
-use App\Listeners\GenerateReportListener;
-use App\Listeners\RetryNotificationListener;
-use App\Listeners\SendNotificationListener;
-use App\Reports\Contracts\ReportGeneratorInterface;
-use App\Reports\NotificationReportGenerator;
-use App\Repositories\ChannelRepository;
-use App\Repositories\Contracts\ChannelRepositoryInterface;
-use App\Repositories\Contracts\NotificationRepositoryInterface;
-use App\Repositories\Contracts\ReportRepositoryInterface;
+use App\Contracts\Repositories\NotificationRepositoryInterface;
+use App\Contracts\Repositories\SubscriberRepositoryInterface;
+use App\Providers\Notification\EmailProvider;
+use App\Providers\Notification\SmsProvider;
 use App\Repositories\NotificationRepository;
-use App\Repositories\ReportRepository;
-use Illuminate\Support\Facades\Event;
+use App\Repositories\SubscriberRepository;
+use App\Services\ProviderFactory;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->app->bind(NotificationRepositoryInterface::class, NotificationRepository::class);
-        $this->app->bind(ChannelRepositoryInterface::class, ChannelRepository::class);
-        $this->app->bind(ReportRepositoryInterface::class, ReportRepository::class);
-        $this->app->bind(ReportGeneratorInterface::class, NotificationReportGenerator::class);
+        $this->app->singleton(
+            NotificationRepositoryInterface::class,
+            NotificationRepository::class,
+        );
 
-        $this->app->singleton(NotificationChannelFactory::class, function ($app) {
-            $handlers = [];
-            foreach (ChannelName::cases() as $channel) {
-                $handlers[$channel->value] = $app->make($channel->handlerClass());
-            }
+        $this->app->singleton(
+            SubscriberRepositoryInterface::class,
+            SubscriberRepository::class,
+        );
 
-            return new NotificationChannelFactory($handlers);
+        $this->app->singleton(ProviderFactory::class, function ($app) {
+            $factory = new ProviderFactory($app);
+
+            $factory->register(SmsProvider::class);
+            $factory->register(EmailProvider::class);
+
+            return $factory;
         });
     }
 
-    public function boot(): void
-    {
-        Event::listen(NotificationCreated::class, SendNotificationListener::class);
-        Event::listen(NotificationRetried::class, RetryNotificationListener::class);
-        Event::listen(ReportRequested::class, GenerateReportListener::class);
-    }
+    public function boot(): void {}
 }

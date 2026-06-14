@@ -4,42 +4,68 @@ declare(strict_types=1);
 
 namespace App\Repositories;
 
-use App\DTO\Notification\NotificationData;
-use App\DTO\Notification\NotificationFilterDTO;
-use App\Enums\NotificationStatus;
-use App\Filters\NotificationQueryFilter;
+use App\Contracts\Repositories\NotificationRepositoryInterface;
+use App\DTO\SendNotificationDTO;
+use App\Enums\NotificationChannel;
+use App\Models\Channel;
+use App\Models\IdempotencyKey;
 use App\Models\Notification;
-use App\Repositories\Contracts\NotificationRepositoryInterface;
-use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Pagination\LengthAwarePaginator;
+use App\Models\NotificationRecipient;
+use Carbon\CarbonInterface;
 
 class NotificationRepository implements NotificationRepositoryInterface
 {
-    public function __construct(private readonly NotificationQueryFilter $filter) {}
-
-    public function create(NotificationData $data): Notification
+    public function findWithRelations(string $id): Notification
     {
-        return Notification::create($data->toArray());
+        return Notification::with('channel', 'recipients')
+            ->findOrFail($id);
     }
 
-    public function updateStatus(Notification $notification, NotificationStatus $status): void
+    public function findActiveChannel(NotificationChannel $channel): Channel
     {
-        $notification->update([Notification::FIELD_STATUS => $status]);
+        return Channel::where('code', $channel->value)
+            ->where('is_active', true)
+            ->firstOrFail();
     }
 
-    public function findStuck(int $minutes): Collection
+    public function createNotification(SendNotificationDTO $dto, int $channelId): Notification
     {
-        return Notification::where(Notification::FIELD_STATUS, NotificationStatus::Processing)
-            ->where('updated_at', '<=', now()->subMinutes($minutes))
-            ->get();
+        return Notification::create([
+            'channel_id' => $channelId,
+            'type' => $dto->type,
+            'message' => $dto->message,
+            'idempotency_key' => $dto->idempotencyKey,
+        ]);
     }
 
-    public function getUserHistory(NotificationFilterDTO $filter): LengthAwarePaginator
+    public function insertRecipients(array $recipients): void
     {
-        $query = Notification::with('channel')->where(Notification::FIELD_USER_ID, $filter->userId);
+        NotificationRecipient::insert($recipients);
+    }
 
-        return $this->filter->apply($query, $filter)
-            ->latest()
-            ->paginate($filter->perPage);
+    public function findIdempotencyKey(string $key): ?IdempotencyKey
+    {
+        return IdempotencyKey::find($key);
+    }
+
+    public function deleteIdempotencyKey(string $key): void
+    {
+        IdempotencyKey::destroy($key);
+    }
+
+    public function upsertIdempotencyKey(
+        string $key,
+        string $notificationId,
+        array $response,
+        CarbonInterface $expiresAt,
+    ): void {
+        IdempotencyKey::updateOrCreate(
+            ['key' => $key],
+            [
+                'notification_id' => $notificationId,
+                'response_snapshot' => $response,
+                'expires_at' => $expiresAt,
+            ],
+        );
     }
 }

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
-use App\Enums\ChannelName;
 use App\Models\Channel;
 use Illuminate\Database\Seeder;
 
@@ -12,8 +11,16 @@ class ChannelSeeder extends Seeder
 {
     public function run(): void
     {
-        foreach (ChannelName::cases() as $channel) {
-            Channel::firstOrCreate(['name' => $channel->value]);
+        $channels = [
+            ['code' => 'sms',   'name' => 'SMS',   'is_active' => true],
+            ['code' => 'email', 'name' => 'Email', 'is_active' => true],
+        ];
+
+        foreach ($channels as $channel) {
+            Channel::updateOrCreate(
+                ['code' => $channel['code']],
+                $channel,
+            );
         }
     }
 }

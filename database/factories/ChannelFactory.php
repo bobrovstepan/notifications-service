@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Enums\ChannelName;
 use App\Models\Channel;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -15,12 +14,24 @@ class ChannelFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => ChannelName::Email->value,
+            'code' => 'sms',
+            'name' => 'SMS',
+            'is_active' => true,
         ];
     }
 
-    public function telegram(): static
+    public function sms(): static
     {
-        return $this->state(['name' => ChannelName::Telegram->value]);
+        return $this->state(['code' => 'sms', 'name' => 'SMS']);
+    }
+
+    public function email(): static
+    {
+        return $this->state(['code' => 'email', 'name' => 'Email']);
+    }
+
+    public function inactive(): static
+    {
+        return $this->state(['is_active' => false]);
     }
 }

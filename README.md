@@ -1,6 +1,6 @@
-# Notifications Service
+# Notification Service
 
-A microservice for sending notifications (email, Telegram, etc.) and generating reports on notification activity.
+A microservice for sending bulk SMS and Email notifications with priority queuing, delivery tracking, and guaranteed at-least-once delivery.
 
 ---
 
@@ -11,13 +11,18 @@ A microservice for sending notifications (email, Telegram, etc.) and generating 
 ```bash
 cp .env.example .env
 docker compose up -d
-docker compose exec app composer install
-docker compose exec app php artisan migrate --seed
+docker compose exec app php artisan key:generate
 ```
 
-The API will be available at `http://localhost:8080`.
+The API will be available at `http://localhost:8000`.
+RabbitMQ Management UI — `http://localhost:15672` (guest / guest).
+Swagger UI — `http://localhost:8000/api/documentation`.
 
-The queue worker and scheduler start automatically as separate Docker services (`worker`, `scheduler`). No manual setup required.
+Two queue workers start automatically as separate Docker services:
+- `worker_high` — processes transactional notifications (OTP codes, critical alerts)
+- `worker_standard` — processes marketing notifications (bulk campaigns)
+
+No manual setup required — migrations and seeders run on container start.
 
 To run tests:
 ```bash
@@ -43,52 +48,83 @@ docker compose exec app ./vendor/bin/pint
 
 ## Architecture
 
-### Partial DDD Influence
-The codebase is organized around domain concepts: `Notification`, `Report`, `Channel`. Each has its own model, repository, DTO, and resource. Not strict DDD, but the boundaries are clear enough to extract into separate services if needed.
+### Layered Architecture
+The codebase follows a strict layered structure: Controllers → Services → Repositories → Models. Each layer knows only about the next one. Controllers handle HTTP, services orchestrate business logic, repositories own all database queries, models define structure and relationships.
+
+### Repository Pattern
+All database queries live in repository classes behind interfaces (`NotificationRepositoryInterface`, `SubscriberRepositoryInterface`). Services depend on interfaces, not implementations — swapping or mocking a repository requires changing one binding in `AppServiceProvider`.
+
+### DTOs
+Input data is wrapped in DTOs (`SendNotificationDTO`, `SubscriberNotificationsDTO`) before reaching the service layer. Providers and jobs communicate through `NotificationPayload` and `ProviderResult`. No raw arrays or primitive soup passed between layers.
+
+### Two-queue Priority System
+Transactional and marketing notifications go into separate RabbitMQ queues (`notifications.transactional`, `notifications.marketing`). Each queue has a dedicated worker with different retry delays — 5s for transactional, 30s for marketing. Critical messages are never blocked by bulk campaigns.
+
+### Guaranteed Delivery
+At-least-once delivery is provided by RabbitMQ — messages are not acknowledged until the job completes successfully. Exactly-once semantics are enforced at the business logic level through three layers:
+
+1. **Final status check** — if a recipient is already `delivered` or `discarded`, duplicate jobs are skipped immediately.
+2. **Redis distributed lock** — prevents two workers from processing the same recipient simultaneously.
+3. **Unique DB constraint** — `(notification_id, subscriber_id)` makes duplicates impossible at the database level.
 
 ### Strategy Pattern for Channels
-Each notification channel (`email`, `telegram`) is a separate class implementing `ChannelHandlerInterface`. A factory resolves the correct handler by channel name. Adding a new channel requires two steps: adding a case to `ChannelName` enum (with its validation rule and handler class reference), and creating the handler class itself. `AppServiceProvider` auto-discovers handlers via `ChannelName::cases()` and never needs to change.
+Each channel (`sms`, `email`) is a separate class implementing `NotificationProviderInterface`. A `ProviderFactory` resolves the correct provider by channel. Adding a new channel means writing one class and registering it in `AppServiceProvider` — nothing else changes.
 
-### Repository Pattern + Service Layer
-Business logic lives in services, data access is behind repository interfaces. Controllers stay thin — they validate input and return responses. This makes it easy to swap implementations (e.g., switch from Eloquent to a raw query builder) without touching business logic.
+### Idempotency
+Clients can pass an `X-Idempotency-Key` header with any request. If the same key is seen again, the original response is returned from cache without creating a new notification. The key is stored in PostgreSQL (survives restarts) and expires after 24 hours.
 
+### Retry with Exponential Backoff
+Failed jobs retry with exponential backoff: `5s → 25s → 125s → 300s`. After all attempts are exhausted, the recipient is marked `discarded` with the failure reason stored in the database.
 
-### Queue-based Processing
-Notifications and reports are processed asynchronously via jobs. Jobs have retry logic (`tries=3`, backoff `30s/60s`) and a `failed()` hook that marks the record as failed in the database. This ensures delivery attempts are tracked and failures are visible. A scheduled cron command retries failed jobs periodically via `queue:retry all`.
+### Native PostgreSQL Enums
+`notification_type` and `notification_status` are real PostgreSQL `ENUM` types — not `VARCHAR` with a `CHECK` constraint. Type safety at the database level, cleaner schema dumps.
 
-### API Versioning
-All routes are prefixed with `/api/v1/`. This allows breaking changes in future versions without affecting existing clients.
+---
 
-### DTOs and Resources
-Input data is wrapped in DTOs (`NotificationData`, `ReportData`) before reaching the service layer — this decouples HTTP request structure from the domain. API responses are shaped by Resource classes (`NotificationResource`, `ReportResource`), keeping response format concerns out of models and controllers.
+## API
 
-### Avoiding Primitive Types
-Raw primitives (`string`, `int`) are replaced with typed objects where possible — enums for statuses (`NotificationStatus`, `ReportStatus`, `ChannelName`) and DTOs for grouped data. This prevents passing values in the wrong order, makes invalid states unrepresentable, and shifts errors to compile time rather than runtime.
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/v1/notifications` | Start a bulk send |
+| `GET` | `/api/v1/notifications/{id}` | Notification status + recipient breakdown |
+| `GET` | `/api/v1/subscribers/{id}/notifications` | Subscriber delivery history |
+| `GET` | `/api/v1/subscribers/{id}/notifications/{id}` | Single notification status for subscriber |
 
-### Dedicated Storage Disk
-Reports are stored on a dedicated `reports` disk (configured in `config/filesystems.php`) separate from the default `local` disk. This isolates report files from other application storage, makes it trivial to swap the underlying driver (e.g., to S3) without touching application code, and keeps the storage root configurable per environment.
+Full interactive documentation available at `http://localhost:8000/api/documentation`.
 
-### Service Container Bindings
-Repository interfaces and the report generator interface are bound to their implementations in `AppServiceProvider`. No class depends on a concrete implementation — only on the interface. This makes it easy to swap implementations (e.g., replace `NotificationRepository` with a cached version) in one place without touching any other code.
+### Send a notification
 
-### Event-driven Dispatch
-Controllers fire events (`NotificationCreated`, `ReportRequested`) rather than dispatching jobs directly. Listeners handle job dispatch. This decouples the HTTP layer from queue logic — adding a new reaction to an event (e.g., sending a webhook) means adding a listener, not modifying the controller.
+```bash
+curl -X POST http://localhost:8000/api/v1/notifications \
+  -H "Content-Type: application/json" \
+  -H "X-Idempotency-Key: your-unique-key" \
+  -d '{
+    "channel": "sms",
+    "type": "transactional",
+    "message": "Your confirmation code: 1234",
+    "subscriber_ids": ["user_1", "user_2", "user_3"]
+  }'
+```
 
-### Query Filters
-Filtering logic for listing notifications is encapsulated in `NotificationQueryFilter`, with filter parameters transported via `NotificationFilterDTO`. This keeps the repository method clean and makes it easy to add or remove filters without touching the query itself.
+### Delivery statuses
+
+| Status | Meaning |
+|--------|---------|
+| `queued` | Accepted, waiting to be sent |
+| `sent` | Passed to the provider |
+| `delivered` | Confirmed by the provider |
+| `discarded` | Permanent failure — invalid number/email or retries exhausted |
 
 ---
 
 ## What Would Be Improved for Production
 
-**Upgrade the queue driver.** The current setup uses Laravel's database queue driver — fine for development, but not for production. The natural upgrade path: first switch to Redis (faster, in-memory, no DB polling), then to a full message broker like RabbitMQ for serious scale. A broker gives native fan-out (one event consumed by multiple services), durable message persistence, backpressure, and dead letter queues — all things a notifications service eventually needs.
+**Authentication.** The API has no auth. In production every request should be authenticated (API key or JWT) and scoped to a tenant.
 
-**Expand test coverage.** Currently only the most critical paths are covered (happy path, job failure hooks). Production requires full coverage: all validation rules, edge cases in report generation, retry behavior, concurrent job execution.
+**Observability.** Add correlation IDs to trace a notification from API request through queue to provider. Export delivery rate and error rate per channel to Prometheus or Datadog.
 
-**Authentication and authorization.** The API currently has no auth. In production, each request should be authenticated (API key or JWT) and scoped to a tenant/user.
+**Rate limiting.** No protection against a single caller flooding the queue. A per-client rate limit on the send endpoint would be the first line of defense.
 
-**Structured logging and observability.** Add correlation IDs to trace a notification through queue → job → channel handler. Export metrics (delivery rate, error rate per channel) to Prometheus or Datadog.
+**Horizontal scaling.** Workers are stateless — scaling means adding more `worker_high` / `worker_standard` containers. Redis locks already handle concurrent processing correctly.
 
-**Idempotency.** Retried jobs can send duplicate notifications. A deduplication key on the notifications table and a check before sending would prevent this.
-
-**Report storage.** Currently reports are stored on the local filesystem. In production this should be S3 (or compatible) so reports survive container restarts and are accessible across multiple app instances.
+**Real providers.** Swap mock classes for real SDK clients (Twilio for SMS, SendGrid for email) by implementing `NotificationProviderInterface`. Nothing else changes.

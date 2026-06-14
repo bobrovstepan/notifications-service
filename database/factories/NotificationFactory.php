@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Enums\NotificationStatus;
+use App\Enums\NotificationType;
 use App\Models\Channel;
 use App\Models\Notification;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -16,21 +16,31 @@ class NotificationFactory extends Factory
     public function definition(): array
     {
         return [
-            'user_id' => 1,
-            'channel_id' => Channel::factory(),
-            'recipient' => $this->faker->email(),
+            'channel_id' => Channel::where('code', 'sms')->first()?->id
+                ?? ChannelFactory::new()->sms()->create()->id,
+            'type' => NotificationType::Transactional,
             'message' => $this->faker->sentence(),
-            'status' => NotificationStatus::Processing,
+            'idempotency_key' => null,
         ];
     }
 
-    public function sent(): static
+    public function transactional(): static
     {
-        return $this->state(['status' => NotificationStatus::Sent]);
+        return $this->state(['type' => NotificationType::Transactional]);
     }
 
-    public function error(): static
+    public function marketing(): static
     {
-        return $this->state(['status' => NotificationStatus::Error]);
+        return $this->state(['type' => NotificationType::Marketing]);
+    }
+
+    public function withIdempotencyKey(string $key): static
+    {
+        return $this->state(['idempotency_key' => $key]);
+    }
+
+    public function forChannel(Channel $channel): static
+    {
+        return $this->state(['channel_id' => $channel->id]);
     }
 }

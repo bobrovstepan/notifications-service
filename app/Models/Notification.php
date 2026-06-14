@@ -4,45 +4,56 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Enums\NotificationStatus;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
+use App\Enums\NotificationType;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * @property int $id
- * @property int $user_id
+ * @property string $id
  * @property int $channel_id
- * @property string $recipient
+ * @property NotificationType $type
  * @property string $message
- * @property NotificationStatus $status
- * @property-read Channel $channel
+ * @property string|null $idempotency_key
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
+ * @property-read Channel     $channel
  */
-#[Fillable(['user_id', 'channel_id', 'recipient', 'message', 'status'])]
 class Notification extends Model
 {
-    use HasFactory;
+    use HasFactory, HasUuids;
 
-    public const string FIELD_USER_ID = 'user_id';
+    protected $fillable = [
+        'channel_id',
+        'type',
+        'message',
+        'idempotency_key',
+    ];
 
-    public const string FIELD_CHANNEL_ID = 'channel_id';
-
-    public const string FIELD_RECIPIENT = 'recipient';
-
-    public const string FIELD_MESSAGE = 'message';
-
-    public const string FIELD_STATUS = 'status';
-
-    protected function casts(): array
-    {
-        return [
-            'status' => NotificationStatus::class,
-        ];
-    }
+    protected $casts = [
+        'type' => NotificationType::class,
+    ];
 
     public function channel(): BelongsTo
     {
         return $this->belongsTo(Channel::class);
+    }
+
+    public function recipients(): HasMany
+    {
+        return $this->hasMany(NotificationRecipient::class);
+    }
+
+    public function scopeTransactional($query): void
+    {
+        $query->where('type', NotificationType::Transactional);
+    }
+
+    public function scopeMarketing($query): void
+    {
+        $query->where('type', NotificationType::Marketing);
     }
 }
