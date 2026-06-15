@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Contracts\Repositories\RecipientRepositoryInterface;
 use App\DTO\NotificationPayload;
 use App\Enums\NotificationStatus;
 use App\Exceptions\LockAcquisitionException;
@@ -16,11 +17,13 @@ class NotificationProcessingService
 {
     public function __construct(
         private readonly ProviderFactory $providerFactory,
+        private readonly RecipientRepositoryInterface $recipientRepository,
+        private readonly RecipientStatusService $statusService,
     ) {}
 
     public function process(string $recipientId, string $notificationId): void
     {
-        $recipient = $this->findRecipient($recipientId);
+        $recipient = $this->recipientRepository->findWithRelations($recipientId);
 
         if ($recipient->status->isFinal()) {
             Log::info('Skipping duplicate job — status is already final', [
@@ -36,10 +39,10 @@ class NotificationProcessingService
 
     public function markAsDiscarded(string $recipientId, string $reason): void
     {
-        $recipient = NotificationRecipient::find($recipientId);
+        $recipient = $this->recipientRepository->findById($recipientId);
 
         if ($recipient && ! $recipient->status->isFinal()) {
-            $recipient->transitionTo(NotificationStatus::Discarded, $reason);
+            $this->statusService->transition($recipient, NotificationStatus::Discarded, $reason);
         }
     }
 
@@ -60,17 +63,17 @@ class NotificationProcessingService
 
     private function send(NotificationRecipient $recipient, string $notificationId): void
     {
-        /** @var Notification $notification */
-        $notification = $recipient->notification;
-        $channel = $notification->channel->code;
-        $provider = $this->providerFactory->make($channel);
         $payload = $this->buildPayload($recipient, $notificationId);
 
-        $recipient->transitionTo(NotificationStatus::Sent);
+        /** @var Notification $notification */
+        $notification = $recipient->notification;
+        $provider = $this->providerFactory->make($notification->channel->code);
+
+        $this->statusService->transition($recipient, NotificationStatus::Sent);
 
         $result = $provider->send($payload);
 
-        $recipient->transitionTo($result->status, $result->failureReason);
+        $this->statusService->transition($recipient, $result->status, $result->failureReason);
 
         Log::info('Notification processed', [
             'recipient_id' => $recipient->id,
@@ -89,11 +92,5 @@ class NotificationProcessingService
             channel: $notification->channel->code,
             notificationId: $notificationId,
         );
-    }
-
-    private function findRecipient(string $recipientId): NotificationRecipient
-    {
-        return NotificationRecipient::with('notification.channel')
-            ->findOrFail($recipientId);
     }
 }

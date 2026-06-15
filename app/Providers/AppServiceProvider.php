@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Contracts\Repositories\NotificationRepositoryInterface;
+use App\Contracts\Repositories\RecipientRepositoryInterface;
 use App\Contracts\Repositories\SubscriberRepositoryInterface;
 use App\Providers\Notification\EmailProvider;
 use App\Providers\Notification\SmsProvider;
 use App\Repositories\NotificationRepository;
+use App\Repositories\RecipientRepository;
 use App\Repositories\SubscriberRepository;
 use App\Services\ProviderFactory;
 use Illuminate\Support\ServiceProvider;
@@ -25,6 +27,11 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(
             SubscriberRepositoryInterface::class,
             SubscriberRepository::class,
+        );
+
+        $this->app->singleton(
+            RecipientRepositoryInterface::class,
+            RecipientRepository::class,
         );
 
         $this->app->singleton(ProviderFactory::class, function ($app) {

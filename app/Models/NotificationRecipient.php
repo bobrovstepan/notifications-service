@@ -21,10 +21,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property Carbon|null $delivered_at
  * @property Carbon $created_at
  * @property Carbon $updated_at
+ * @property-read Notification $notification
  */
 class NotificationRecipient extends Model
 {
-    use HasFactory, HasUuids;
+    use HasFactory;
+    use HasUuids;
 
     protected $fillable = [
         'notification_id',
@@ -44,31 +46,6 @@ class NotificationRecipient extends Model
     public function notification(): BelongsTo
     {
         return $this->belongsTo(Notification::class);
-    }
-
-    public function transitionTo(NotificationStatus $next, ?string $failureReason = null): void
-    {
-        if (! $this->status->isTransitionAllowed($next)) {
-            throw new \LogicException(
-                "Transition {$this->status->value} → {$next->value} is not allowed for recipient {$this->id}"
-            );
-        }
-
-        $data = ['status' => $next];
-
-        if ($next === NotificationStatus::Sent) {
-            $data['sent_at'] = now();
-        }
-
-        if ($next === NotificationStatus::Delivered) {
-            $data['delivered_at'] = now();
-        }
-
-        if ($next === NotificationStatus::Discarded && $failureReason) {
-            $data['failure_reason'] = $failureReason;
-        }
-
-        $this->update($data);
     }
 
     public function scopeQueued($query): void

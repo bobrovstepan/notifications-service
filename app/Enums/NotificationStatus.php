@@ -14,10 +14,10 @@ enum NotificationStatus: string
     public function label(): string
     {
         return match ($this) {
-            self::Queued => 'В очереди',
-            self::Sent => 'Отправлено',
-            self::Delivered => 'Доставлено',
-            self::Discarded => 'Отброшено',
+            self::Queued => 'Queued',
+            self::Sent => 'Sent',
+            self::Delivered => 'Delivered',
+            self::Discarded => 'Discarded',
         };
     }
 
@@ -35,8 +35,7 @@ enum NotificationStatus: string
         return match ($this) {
             self::Queued => in_array($next, [self::Sent, self::Discarded]),
             self::Sent => in_array($next, [self::Delivered, self::Discarded]),
-            self::Delivered => false,
-            self::Discarded => false,
+            self::Delivered, self::Discarded => false,
         };
     }
 
